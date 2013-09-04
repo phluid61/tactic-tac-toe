@@ -1,104 +1,6 @@
 <?php
 
-class Board {
-	public $rows = array(
-		array(0,0,0),
-		array(0,0,0),
-		array(0,0,0),
-	);
-	public $winner = 0;
-	public $is_full = false;
-	public function set($x, $y, $p) {
-		if ($x < 0 || $x > 2 || $y < 0 || $y > 2) {
-			throw new OutOfRangeException("out of range ($x,$y)");
-		}
-		if ($q = $this->rows[$x][$y]) {
-			throw new RuntimeException("cell ($x,$y) already set [$q, $p]");
-		}
-		$this->rows[$x][$y] = $p;
-		// check for weiner
-		if (!$this->winner) {
-			for ($i = 0; $i < 3; $i++) {
-				if ($this->rows[$i][0] & $this->rows[$i][1] & $this->rows[$i][2]) {
-					$this->winner = $this->rows[$i][0];
-					break;
-				} elseif ($this->rows[0][$i] & $this->rows[1][$i] & $this->rows[2][$i]) {
-					$this->winner = $this->rows[0][$i];
-					break;
-				}
-			}
-			if ($this->rows[0][0] & $this->rows[1][1] & $this->rows[2][2]) {
-				$this->winner = $this->rows[1][1];
-			} elseif ($this->rows[0][2] & $this->rows[1][1] & $this->rows[2][0]) {
-				$this->winner = $this->rows[1][1];
-			}
-		}
-		// check if full
-		if (!$this->is_full) {
-			$full = true;
-			foreach ($this->rows as $r) {
-				foreach ($r as $c) {
-					if (!$c) {
-						$full = false;
-						break 2;
-					}
-				}
-			}
-			$this->is_full = $full;
-			if ($full && !$this->winner) {
-				$this->winner = 3;
-			}
-		}
-	}
-}
-
-class Game {
-	public $outer;
-	public $inner;
-	public $coord;
-	public $turn;
-	public $over;
-
-	public function __construct() {
-		$this->outer = new Board();
-		$this->inner = array(
-			array(new Board(), new Board(), new Board()),
-			array(new Board(), new Board(), new Board()),
-			array(new Board(), new Board(), new Board()),
-		);
-		$this->coord = null;
-		$this->turn = 1;
-		$this->over = false;
-	}
-
-	public function set($ox, $oy, $ix, $iy) {
-		if ($this->coord) {
-			// TODO: validate that ox,oy matches
-		}
-		$board = $this->inner[$ox][$oy];
-		$old_winner = $board->winner;
-		$board->set($ix, $iy, $this->turn);
-		$new_winner = $board->winner;
-		if ($new_winner != $old_winner) {
-			$this->outer->set($ox,$oy,$new_winner);
-		}
-
-		if ($this->outer->winner) {
-			// we have an weiner!
-			$this->over = $this->outer->winner;
-		} elseif ($this->outer->is_full) {
-			// we have TWO LOSERS!!
-			$this->over = true;
-		}
-
-		$this->turn = ($this->turn % 2)+1;
-		if ($this->inner[$ix][$iy]->is_full) {
-			$this->coord = null;
-		} else {
-			$this->coord = array($ix, $iy);
-		}
-	}
-}
+require_once('game.class.php');
 
 session_start();
 if (!isset($_SESSION['game'])) {
@@ -192,6 +94,11 @@ table.outer.p3,
 <body>
 
 <?php
+
+if ($game->message) {
+	echo "<p>{$game->message}</p>";
+}
+
 echo "<table class=\"outer p{$game->over}\">\n";
 foreach ($game->outer->rows as $r=>$out_row) {
 	$in_row = $game->inner[$r];
